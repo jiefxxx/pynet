@@ -1,13 +1,12 @@
 import base64
 import hashlib
 import json
+import logging
 import struct
 import time
 
+import janus
 from pythread import threaded
-
-from pynet.http.handler import HTTPHandler
-from pynet.http.tools import HTTP_CONNECTION_ABORT
 
 
 def webSocket_process_key(key):
@@ -73,10 +72,12 @@ def webSocket_compile(fin, opcode, data):
 
 
 class WebSocketClient:
-    def __init__(self, header, connection, room):
+    def __init__(self, header, room, addr, server):
+        self.addr = addr
         self.request_header = header
-        self.connection = connection
         self.room = room
+        self.server = server
+        self.queue = janus.Queue(maxsize=100, loop=server.loop)
         self.room.new_client(self)
 
     def error(self):
@@ -87,9 +88,9 @@ class WebSocketClient:
         self.room.exec_message(self, message)
         return data
 
-    def send(self, fin, opcode, data):
+    def send(self, fin, opcode, data, async_mode=False):
         message = webSocket_compile(fin, opcode, data)
-        self.connection.send(message, chunk_size=0)
+        return self.queue.sync_q.put(message)
 
     def send_text(self, text):
         self.send(1, 1, text.encode())
@@ -101,7 +102,7 @@ class WebSocketClient:
         self.send(1, 0x09, b"42")
 
     def close(self):
-        self.connection.close()
+        self.queue.sync_q.put(None)
 
 
 class WebSocketRoom:
@@ -113,6 +114,7 @@ class WebSocketRoom:
     def new_client(self, client):
         if client not in self.clients:
             self.clients.append(client)
+            logging.info(str(type(self).__name__) + " new WS_client " + str(client.addr))
             self.on_new(client)
 
     @threaded("httpServer")
@@ -126,8 +128,8 @@ class WebSocketRoom:
         elif message[1] == 8:
             self.on_close(client)
             client.send(1, 8, message[2])
+            self.close(client)
             client.close()
-            self.clients.remove(client)
         elif message[1] == 1:
             self.on_message(client, message[2].decode())
         elif message[1] == 2:
@@ -139,7 +141,7 @@ class WebSocketRoom:
     def on_error(self, client):
         if client in self.clients:
             self.on_close(client)
-            self.clients.remove(client)
+            self.close(client)
 
     def on_message(self, client, message):
         pass
@@ -150,6 +152,11 @@ class WebSocketRoom:
     def on_close(self, client):
         pass
 
+    def close(self, client):
+        logging.info(str(type(self).__name__) + " close WS_client " + str(client.addr))
+        self.clients.remove(client)
+
+    @threaded("httpServer")
     def send(self, data, client=None):
         if client is None:
             for client in self.clients:
@@ -170,18 +177,3 @@ class WebSocketRoom:
     def send_json(self, data, client=None):
         data = json.dumps(data, sort_keys=True, indent=4)
         self.send(data, client=client)
-
-
-class WebSocketEntryPoint(HTTPHandler):
-    def prepare(self):
-        key = self.header.get_webSocket_upgrade()
-        room = self.get_webSocket_room()
-        if key or room is None:
-            print(key, room)
-            return HTTP_CONNECTION_ABORT
-
-        key = webSocket_process_key(key)
-
-        self.upgrade(WebSocketClient(self.header, self.connection, room))
-
-        return self.response.upgrade_webSocket(key)

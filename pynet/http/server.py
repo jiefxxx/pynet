@@ -1,159 +1,142 @@
 import asyncio
+import logging
 import re
 
-import janus
-from pythread import threaded, create_new_mode
+from pythread import create_new_mode
 from pythread.modes import ProcessMode
 
-from pynet.http.handler import HTTP404Handler
-from pynet.http.header import HTTPHeader
-from pynet.http.tools import HTTP_CONNECTION_ABORT, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
+from pynet.http.exceptions import HTTPError, HTTPStreamEnd
+from pynet.http.handler import HTTP404handler
+from pynet.http.header import HTTPRequestHeader
+from pynet.http.response import HTTPResponse
+from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, log_response
 
-CHUNK_SIZE = 1024*5
+CHUNK_SIZE = 1024*50
 
 
-async def feed_stream_reader(reader, stream_reader):
-    try:
-        prev_data = b''
-        while True:
-            data = await reader.read(CHUNK_SIZE)
-            if len(data) == 0:
-                break
-            prev_data = stream_reader.feed(prev_data + data)
-        return True
-    except (ConnectionResetError, BrokenPipeError):
-        stream_reader.error()
-        return False
+async def stream_reader(reader, stream_handler):
+    prev_data = b''
+    while True:
+        data = await reader.read(CHUNK_SIZE)
+        if len(data) == 0:
+            raise HTTPStreamEnd()
+        prev_data = stream_handler.feed(prev_data + data)
+
+
+async def stream_sender(writer, stream_handler):
+    while True:
+        data = await stream_handler.queue.async_q.get()
+        if data is None:
+            raise HTTPStreamEnd()
+        writer.write(data)
+        await writer.drain()
 
 
 async def get_header(reader):
-    try:
-        header = HTTPHeader()
-        while True:
-            data = await reader.readline()
-            data = data[:-2]
-            if len(data) > 0:
-                header.parse_line(data)
-            else:
-                break
-        return header
-    except (ConnectionResetError, BrokenPipeError):
-        return None
-
-
-async def feed_data(reader, size, handler):
-    try:
-
-        while size > 0:
-            if CHUNK_SIZE > size:
-                data = await reader.read(size)
-            else:
-                data = await reader.read(CHUNK_SIZE)
-            size -= len(data)
-            if asyncio.iscoroutinefunction(handler.feed):
-                await handler.feed(data)
-            else:
-                handler.feed(data)
-        return True
-
-    except (ConnectionResetError, BrokenPipeError):
-        return False
-
-
-class HTTPConnection:
-    def __init__(self, server, writer, reader, loop):
-        self.queue = janus.Queue(maxsize=100, loop=loop)
-        self.server, self.writer, self.reader = server, writer, reader
-        self.alive = True
-        self.stream_reader = None
-
-    def is_alive(self):
-        return self.alive
-
-    def send(self, data, chunk_size=None):
-        if chunk_size is None:
-            chunk_size = CHUNK_SIZE
-        if chunk_size > 0:
-            while len(data) > chunk_size:
-                self.queue.sync_q.put(data[:chunk_size])
-                data = data[chunk_size:]
-            self.queue.sync_q.put(data)
-        else:
-            if not self.queue.sync_q.full():
-                self.queue.sync_q.put(data)
-                return True
-            else:
-                return False
-
-    def get_handler(self, header):
-        handler, args = self.server.get_route(header.url.path)
-        return handler(header, self, args)
-
-    def close(self):
-        if self.alive:
-            self.queue.sync_q.put(None)
-
-    async def async_close(self):
-        if self.alive:
-            await self.queue.async_q.put(None)
-
-    def kill(self):
-        if self.stream_reader:
-            self.stream_reader.error()
-        self.alive = False
-        self.writer.close()
-
-    @threaded("httpServer")
-    def execute(self, handler):
-        handler.execute_request()
-
-    async def sender(self):
+    header = HTTPRequestHeader()
+    while True:
         try:
-
-            while True:
-                data = await self.queue.async_q.get()
-                if data is None:
-                    self.kill()
-                    return
-                self.writer.write(data)
-                await self.writer.drain()
-
-        except (ConnectionResetError, BrokenPipeError):
-            self.kill()
-
-    async def receiver(self):
-        header = await get_header(self.reader)
-        if header is None or not header.is_valid():
-            self.kill()
-            return
-
-        handler = self.get_handler(header)
-
-        if asyncio.iscoroutinefunction(handler.prepare):
-            prepare_return = await handler.prepare()
+            data = await asyncio.wait_for(reader.readline(), timeout=5.0)
+        except asyncio.TimeoutError:
+            raise HTTPError(408)
+        data = data[:-2]
+        if len(data) > 0:
+            header.parse_line(data)
         else:
-            prepare_return = handler.prepare()
+            break
+    return header
 
-        if prepare_return == HTTP_CONNECTION_ABORT:
-            return await self.async_close()
 
-        elif prepare_return == HTTP_CONNECTION_CONTINUE:
-            data_count = int(header.fields.get("Content-Length", default='0'))
-            if not await feed_data(self.reader, data_count, handler):
-                return self.kill()
+async def get_data(reader, size, handler):
+    while size > 0:
+        if CHUNK_SIZE > size:
+            data = await reader.read(size)
+        else:
+            data = await reader.read(CHUNK_SIZE)
+        size -= len(data)
+        if asyncio.iscoroutinefunction(handler.feed):
+            await handler.feed(data)
+        else:
+            handler.feed(data)
+    return True
 
-            await self.execute(handler).async_wait()
 
-            return await self.async_close()
+async def send_response(writer, response):
+    for data in response.sender(CHUNK_SIZE):
+        writer.write(data)
+        await writer.drain()
 
-        elif prepare_return == HTTP_CONNECTION_UPGRADE:
-            self.stream_reader = handler.upgraded_streamReader
-            if not await feed_stream_reader(self.reader, self.stream_reader):
-                self.kill()
 
-            return await self.async_close()
+async def send_error(writer, code, server, handler=None):
+    if handler:
+        response = handler.response.error(code)
+    else:
+        response = HTTPResponse()
+        response.header.fields.add_fields(server.base_fields)
+    try:
+        await send_response(writer, response.error(code))
+    except (ConnectionResetError, BrokenPipeError):
+        pass
+    finally:
+        return response
 
-        return await self.async_close()
+
+async def http_worker(reader, writer, server):
+    addr = writer.get_extra_info('peername')
+    handler = None
+    stream_handler = None
+    try:
+        while True:
+            header = await get_header(reader)
+            if not header.is_valid():
+                raise HTTPError(400)
+
+            handler_construct, user_data, regex = server.get_route(header.url.path)
+            header.url.regex = regex
+            handler = handler_construct(header, user_data, addr, server)
+
+            prepare_return = await handler.prepare()
+
+            if prepare_return == HTTP_CONNECTION_CONTINUE:
+
+                data_count = header.fields.get("Content-Length", 0, int)
+
+                if not await get_data(reader, data_count, handler):
+                    raise HTTPError(handler.abort_code, handler=handler)
+
+                await handler.execute_request()
+                log_response(logging.info, addr, handler.response, handler)
+                await send_response(writer, handler.response)
+
+            elif prepare_return == HTTP_CONNECTION_UPGRADE:
+
+                await send_response(writer, handler.response)
+                log_response(logging.info, addr, handler.response, handler)
+                stream_handler = handler.stream_handler
+                await asyncio.gather(stream_sender(writer, stream_handler),
+                                     stream_reader(reader, stream_handler))
+
+            else:
+                raise HTTPError(500)
+
+            if not header.keep_alive():
+                break
+            handler = None
+
+    except (ConnectionResetError, BrokenPipeError, HTTPStreamEnd):
+        if stream_handler:
+            stream_handler.error()
+
+    except HTTPError as exc:
+        response = await send_error(writer, exc.code, server, handler)
+        log_response(logging.warning, addr, response, handler)
+
+    except Exception as e:
+        response = await send_error(writer, 500, server, handler)
+        log_response(logging.exception, addr, response, handler)
+
+    finally:
+        writer.close()
 
 
 class HTTPRouter:
@@ -166,14 +149,13 @@ class HTTPRouter:
             m = re.fullmatch(reg_path, path)
             if m is not None:
                 user_data.update(self.user_data)
-                args = []
+                regex = []
                 for group in m.groups():
                     if len(group) == 0:
                         group = None
-                    args.append(group)
-                user_data["#regex_data"] = tuple(args)
-                return handler, user_data
-        return HTTP404Handler, {"#regex_data": ()}
+                    regex.append(group)
+                return handler, user_data, regex
+        return HTTP404handler, [], []
 
     def add_user_data(self, name, value):
         self.user_data[name] = value
@@ -191,16 +173,19 @@ class HTTPServer(HTTPRouter):
         HTTPRouter.__init__(self)
         self.loop = loop
         self.server = None
+        self.base_fields = [("Server", "pynet/0.02")]
         create_new_mode(ProcessMode, "httpServer", size=5)
 
+    def set_base_fields(self, base_fields):
+        self.base_fields = base_fields + [("Server", "pynet/0.1.0")]
+
     async def root_handler(self, reader, writer):
-        connection = HTTPConnection(self, writer, reader, self.loop)
-        await asyncio.gather(connection.sender(), connection.receiver())
+        await http_worker(reader, writer, self)
 
     def initialize(self, port=4242):
         coro = asyncio.start_server(self.root_handler, reuse_address=True, port=port, loop=self.loop)
         self.server = self.loop.run_until_complete(coro)
-        print('Serving on {}'.format(self.server.sockets[0].getsockname()))
+        logging.info('Serving on {}'.format(self.server.sockets[0].getsockname()))
 
     def close(self):
         self.server.close()

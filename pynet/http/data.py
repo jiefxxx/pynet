@@ -3,6 +3,8 @@ import json
 import os
 from tempfile import NamedTemporaryFile
 
+from pynet.http.exceptions import HTTPError
+
 
 class HTTPData:
     def __init__(self, size):
@@ -25,7 +27,7 @@ class HTTPData:
 
     def feed(self, data):
         if self.io_size()+len(data) > self.size:
-            raise Exception("too much data")
+            raise HTTPError(413)
         self.data_stream.write(data)
 
         if self.completed():

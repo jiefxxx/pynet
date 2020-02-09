@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pynet",
-    version="0.0.1",
+    version="0.1.0",
     author="jiefxxx",
     author_email="jiefxxx@gmail.com",
     description="Network library",

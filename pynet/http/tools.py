@@ -1,5 +1,15 @@
 import http
+import mimetypes
 import re
+
+import magic
+
+
+def get_mimetype(path):
+    mime = magic.Magic().from_file(path)
+    if mime == "text/plain":
+        mime = mimetypes.guess_type(path)[0]
+    return mime
 
 
 def chunk(path, seek, size=1024 * 5):
@@ -9,7 +19,7 @@ def chunk(path, seek, size=1024 * 5):
     return seek + len(ret), ret
 
 
-def chunks(path, seek=-1, chunk_size=65500):
+def chunks(path, seek=0, chunk_size=65500):
     with open(path, "rb") as f:
         if seek > 0:
             f.seek(seek)
@@ -46,3 +56,12 @@ def http_parse_field(line):
 HTTP_CONNECTION_ABORT = -1
 HTTP_CONNECTION_CONTINUE = 0
 HTTP_CONNECTION_UPGRADE = 1
+
+
+def log_response(log_fct, addr, response, handler=None):
+    code = response.header.code
+    if handler:
+        log_fct("["+str(code) + "] "+http_code_to_string(code)+" "+
+                str(addr)+" "+str(handler.header.query)+" "+str(handler.header.url))
+    else:
+        log_fct("["+str(code)+"] "+http_code_to_string(code)+" "+str(addr))
