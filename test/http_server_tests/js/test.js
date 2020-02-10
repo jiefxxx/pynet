@@ -123,14 +123,14 @@ app.controller('myCtrl', function($scope, $interval) {
     
     $scope.refresh_temperatures = function(){
         $.ajax({
-            url: "http://192.168.1.19:4242/sensors/indoor_temp?latests=1;named=1",
+            url: "http://192.168.1.19:4242/sensors/indoor_temp?latests=1",
             type: 'get',
             dataType: 'json',
             success: function (data) {
                 reset_bar_chart(tempChart);
                 for (i in data){
                     var value = data[i].x_value;
-                    var label = data[i].node_name+":"+data[i].sensor_id.toString()
+                    var label = data[i].node_id.toString()+":"+data[i].sensor_id.toString()
                     data[i].date = new Date(1000*data[i].time_t);
                     if (value < 16){
                         add_to_bar_chart(tempChart, label, value, color='rgba(88, 166, 245, 0.2)');
@@ -152,14 +152,14 @@ app.controller('myCtrl', function($scope, $interval) {
     };
     $scope.refresh_humidity = function(){
         $.ajax({
-            url: "http://192.168.1.19:4242/sensors/indoor_humidity?latests=1;named=1",
+            url: "http://192.168.1.19:4242/sensors/indoor_humidity?latests=1",
             type: 'get',
             dataType: 'json',
             success: function (data) {
                 reset_bar_chart(humiChart);
                 for (i in data){
                     var value = data[i].x_value;
-                    var label = data[i].node_name+":"+data[i].sensor_id.toString();
+                    var label = data[i].node_id.toString()+":"+data[i].sensor_id.toString();
                     data[i].date = new Date(1000*data[i].time_t);
                     add_to_bar_chart(humiChart, label, value)
                 }
@@ -173,7 +173,7 @@ app.controller('myCtrl', function($scope, $interval) {
     $interval(function () {
         $scope.refresh_temperatures();
         $scope.refresh_humidity();
-    }, 10000);
+    }, 1000000);
   
 });
 

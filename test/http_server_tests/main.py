@@ -27,6 +27,9 @@ class MainHandler(HTTPHandler):
 
     async def GET(self, url):
         # raise HTTPError(404)
+        print(self.header.get_cookie("test1", int))
+        self.response.header.set_cookie("test1", 42, expires=1, httponly=True)
+        self.response.header.set_cookie("test", 43, expires=1, httponly=True)
         self.response.file("/home/jief/workspace/pynet/test/http_server_tests/main.html")
 
 

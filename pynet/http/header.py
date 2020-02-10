@@ -1,7 +1,7 @@
 from urllib.parse import urlparse, parse_qsl
 
 from pynet.http.exceptions import HTTPError
-from pynet.http.tools import http_parse_query, http_parse_field, http_code_to_string
+from pynet.http.tools import http_parse_query, http_parse_field, http_code_to_string, create_cookie
 
 
 class HTTPResponseHeader:
@@ -10,6 +10,13 @@ class HTTPResponseHeader:
         self.code = 400
         self.fields = HTTPFields()
         self.fields.set("Content-Length", str(0))
+
+    def set_cookie(self, name, value, expires=None, **kwargs):
+        finder = str(name)+"="+str(value)
+        for field in self.fields.fields:
+            if field[0] == "Set-Cookie" and field[1][:len(finder)] == finder:
+                self.fields.fields.remove(field)
+        self.fields.append(("Set-Cookie", create_cookie(name, value, expires, **kwargs)))
 
     def __str__(self):
         ret = self.proto + " " + str(self.code) + " " + http_code_to_string(self.code) + "\r\n"
@@ -41,6 +48,17 @@ class HTTPRequestHeader:
         if "Upgrade" in connection:
             return True
         return False
+
+    def get_cookie(self, name, data_type=None):
+        cookie_raw = self.fields.get("Cookie")
+        if not cookie_raw:
+            return
+        for cookie in cookie_raw.split("; "):
+            cookie = cookie.split("=")
+            if cookie[0] == name:
+                if data_type:
+                    return data_type(cookie[1])
+                return cookie[1]
 
     def get_websocket_upgrade(self):
         if self.upgraded() and self.fields.get("Upgrade") == "websocket":

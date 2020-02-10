@@ -1,8 +1,25 @@
+import datetime
 import http
 import mimetypes
 import re
+from http import cookies
 
 import magic
+
+
+def format_cookie_date(delta):
+    time_format = "%a, %d %b %Y"
+    return "%s" % ( (datetime.datetime.now() + datetime.timedelta(delta)).strftime(time_format) )
+
+
+def create_cookie(name, value, expires=None, **kwargs):
+    cookie = cookies.SimpleCookie()
+    cookie[name] = value
+    if expires:
+        cookie[name]["expires"] = format_cookie_date(expires)
+    for kwarg in kwargs:
+        cookie[name][kwarg] = kwargs[kwarg]
+    return cookie.output()[12:]
 
 
 def get_mimetype(path):
