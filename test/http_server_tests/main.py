@@ -44,6 +44,11 @@ class FileHandler(HTTPHandler):
         self.response.file("/home/jief/workspace/pynet/test/http_server_tests/js/"+url.regex[0])
 
 
+class TestHandler(HTTPHandler):
+    async def GET(self, url):
+        self.response.text(200, "test_string", content_type="text/html")
+
+
 scripts_room = ScriptsRoom()
 
 loop = asyncio.get_event_loop()
@@ -51,6 +56,7 @@ http_server = HTTPServer(loop)
 http_server.add_user_data("notify", scripts_room)
 http_server.add_route("/", MainHandler,  ws=scripts_room)
 http_server.add_route("/js/(.*)", FileHandler)
+http_server.add_route("/test", TestHandler)
 http_server.initialize(8080)
 
 try:

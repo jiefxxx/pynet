@@ -106,12 +106,13 @@ async def http_worker(reader, writer, server):
                     raise HTTPError(handler.abort_code, handler=handler)
 
                 await handler.execute_request()
-                log_response(logging.info, addr, handler.response, handler)
-                await send_response(writer, handler.response)
+                response = await handler.prepare_response()
+                log_response(logging.info, addr, response, handler)
+                await send_response(writer, response)
 
             elif prepare_return == HTTP_CONNECTION_UPGRADE:
-
-                await send_response(writer, handler.response)
+                response = await handler.prepare_response()
+                await send_response(writer, response)
                 log_response(logging.info, addr, handler.response, handler)
                 stream_handler = handler.stream_handler
                 await asyncio.gather(stream_sender(writer, stream_handler),
@@ -176,11 +177,11 @@ class HTTPServer(HTTPRouter):
         self.sessionManager = HTTPSessionManager()
         self.loop = loop
         self.server = None
-        self.base_fields = [("Server", "pynet/0.02")]
+        self.base_fields = [("Server", "pynet/0.1.1")]
         create_new_mode(ProcessMode, "httpServer", size=5)
 
     def set_base_fields(self, base_fields):
-        self.base_fields = base_fields + [("Server", "pynet/0.1.0")]
+        self.base_fields = base_fields + [("Server", "pynet/0.1.1")]
 
     async def root_handler(self, reader, writer):
         await http_worker(reader, writer, self)

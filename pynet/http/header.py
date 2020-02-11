@@ -18,6 +18,9 @@ class HTTPResponseHeader:
                 self.fields.fields.remove(field)
         self.fields.append(("Set-Cookie", create_cookie(name, value, expire, **kwargs)))
 
+    def enable_range(self, value):
+        self.fields.set("Accept-Ranges", value)
+
     def __str__(self):
         ret = self.proto + " " + str(self.code) + " " + http_code_to_string(self.code) + "\r\n"
         ret += str(self.fields)

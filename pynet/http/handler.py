@@ -12,6 +12,7 @@ from pynet.http.websocket import webSocket_process_key, WebSocketClient
 class HTTPHandler:
     handler_fields = []
     enable_session = False
+    enable_range = False
 
     def __init__(self, header, args, addr, server):
         self.addr = addr
@@ -31,6 +32,9 @@ class HTTPHandler:
             self.session = self.server.sessionManager.get_session(self.header.get_cookie("sessionId"), addr[0])
             self.response.header.set_cookie("sessionId", self.session.uid, expire=self.session.expire, httponly=True)
 
+        if self.enable_range:
+            self.response.header.enable_range("bytes")
+
     def upgrade(self, stream_handler):
         self.stream_handler = stream_handler
 
@@ -49,6 +53,14 @@ class HTTPHandler:
         if content_length > 0:
             self.data = HTTPData(content_length)
         return HTTP_CONNECTION_CONTINUE
+
+    async def prepare_response(self):
+        if self.enable_range:
+            self.response.set_length(self.header.fields.get("Range"))
+        else:
+            self.response.set_length()
+
+        return self.response
 
     def feed(self, data_chunk):
         self.data.feed(data_chunk)
