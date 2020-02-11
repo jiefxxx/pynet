@@ -29,11 +29,11 @@ class MainHandler(HTTPHandler):
 
     async def GET(self, url):
         # raise HTTPError(404)
-        print("test1", self.header.get_cookie("test1", int))
+        print("test_cookie", self.header.get_cookie("test_cookie", int))
         self.response.header.set_cookie("test1", 42, expire=5, httponly=True)
 
-        print("test2", self.session.data.get("test2"))
-        self.session.data["test2"] = 43
+        print("test_session", self.session.data.get("test_session"))
+        self.session.data["test_session"] = 43
 
         self.response.file("/home/jief/workspace/pynet/test/http_server_tests/main.html")
 
@@ -54,15 +54,21 @@ class TestJsonHandler(HTTPHandler):
         self.response.json(200, {"test": {"name": "json", "value": 42}})
 
 
+class RenderHandler(HTTPHandler):
+    async def GET(self, url):
+        self.html_render("test.template", data="world")
+
+
 scripts_room = ScriptsRoom()
 
 loop = asyncio.get_event_loop()
-http_server = HTTPServer(loop)
+http_server = HTTPServer(loop, template_dir='/home/jief/workspace/pynet/test/http_server_tests/template')
 http_server.add_user_data("notify", scripts_room)
 http_server.add_route("/", MainHandler,  ws=scripts_room)
 http_server.add_route("/js/(.*)", FileHandler)
 http_server.add_route("/test", TestHandler)
 http_server.add_route("/json", TestJsonHandler)
+http_server.add_route("/template", RenderHandler)
 http_server.initialize(8080)
 
 try:

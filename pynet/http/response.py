@@ -3,6 +3,8 @@ import io
 import json
 import os
 
+from mako.runtime import Context
+
 from pynet.http.header import HTTPResponseHeader
 from pynet.http.tools import get_mimetype
 
@@ -31,6 +33,13 @@ class HTTPResponse:
         self.header.code = code
         self.header.fields.set("Content-type", content_type)
         self.data = io.BytesIO(data.encode())
+        return self
+
+    def render(self, code, template, **kwargs):
+        self.text(code, "", content_type="text/html")
+        wrapper_file = codecs.getwriter('utf-8')(self.data)
+        ctx = Context(wrapper_file, **kwargs)
+        template.render_context(ctx)
         return self
 
     def json(self, code, data, readable=False):

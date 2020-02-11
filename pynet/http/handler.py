@@ -35,6 +35,10 @@ class HTTPHandler:
         if self.enable_range:
             self.response.header.enable_range("bytes")
 
+    def html_render(self, template_name, **kwargs):
+        template = self.server.get_template(template_name)
+        self.response.render(200, template, **kwargs)
+
     def upgrade(self, stream_handler):
         self.stream_handler = stream_handler
 

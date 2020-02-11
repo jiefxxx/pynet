@@ -2,6 +2,7 @@ import asyncio
 import logging
 import re
 
+from mako.lookup import TemplateLookup
 from pythread import create_new_mode
 from pythread.modes import ProcessMode
 
@@ -171,10 +172,12 @@ class HTTPRouter:
 
 
 class HTTPServer(HTTPRouter):
-    def __init__(self, loop):
+    def __init__(self, loop, template_dir="template/"):
         HTTPRouter.__init__(self)
         self.router = HTTPRouter()
         self.sessionManager = HTTPSessionManager()
+        self.template_lookup = TemplateLookup(directories=[template_dir],
+                                       module_directory='/tmp/mako_modules')
         self.loop = loop
         self.server = None
         self.base_fields = [("Server", "pynet/0.1.1")]
@@ -182,6 +185,9 @@ class HTTPServer(HTTPRouter):
 
     def set_base_fields(self, base_fields):
         self.base_fields = base_fields + [("Server", "pynet/0.1.1")]
+
+    def get_template(self, name):
+        return self.template_lookup.get_template(name)
 
     async def root_handler(self, reader, writer):
         await http_worker(reader, writer, self)
