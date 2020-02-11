@@ -11,6 +11,7 @@ from pynet.http.websocket import webSocket_process_key, WebSocketClient
 
 class HTTPHandler:
     handler_fields = []
+    enable_session = False
 
     def __init__(self, header, args, addr, server):
         self.addr = addr
@@ -22,8 +23,13 @@ class HTTPHandler:
 
         self.server = server
 
+        self.session = None
         self.data = None
         self.stream_handler = None
+
+        if self.enable_session:
+            self.session = self.server.sessionManager.get_session(self.header.get_cookie("sessionId"), addr[0])
+            self.response.header.set_cookie("sessionId", self.session.uid, expire=self.session.expire, httponly=True)
 
     def upgrade(self, stream_handler):
         self.stream_handler = stream_handler

@@ -11,12 +11,12 @@ class HTTPResponseHeader:
         self.fields = HTTPFields()
         self.fields.set("Content-Length", str(0))
 
-    def set_cookie(self, name, value, expires=None, **kwargs):
+    def set_cookie(self, name, value, expire=None, **kwargs):
         finder = str(name)+"="+str(value)
         for field in self.fields.fields:
             if field[0] == "Set-Cookie" and field[1][:len(finder)] == finder:
                 self.fields.fields.remove(field)
-        self.fields.append(("Set-Cookie", create_cookie(name, value, expires, **kwargs)))
+        self.fields.append(("Set-Cookie", create_cookie(name, value, expire, **kwargs)))
 
     def __str__(self):
         ret = self.proto + " " + str(self.code) + " " + http_code_to_string(self.code) + "\r\n"

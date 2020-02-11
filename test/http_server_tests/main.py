@@ -24,12 +24,16 @@ class ScriptsRoom(WebSocketRoom):
 
 class MainHandler(HTTPHandler):
     handler_fields = [("Access-Control-Allow-Origin", "*")]
+    enable_session = True
 
     async def GET(self, url):
         # raise HTTPError(404)
-        print(self.header.get_cookie("test1", int))
-        self.response.header.set_cookie("test1", 42, expires=1, httponly=True)
-        self.response.header.set_cookie("test", 43, expires=1, httponly=True)
+        print("test1", self.header.get_cookie("test1", int))
+        self.response.header.set_cookie("test1", 42, expire=5, httponly=True)
+
+        print("test2", self.session.data.get("test2"))
+        self.session.data["test2"] = 43
+
         self.response.file("/home/jief/workspace/pynet/test/http_server_tests/main.html")
 
 

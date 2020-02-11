@@ -9,6 +9,7 @@ from pynet.http.exceptions import HTTPError, HTTPStreamEnd
 from pynet.http.handler import HTTP404handler
 from pynet.http.header import HTTPRequestHeader
 from pynet.http.response import HTTPResponse
+from pynet.http.session import HTTPSessionManager
 from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, log_response
 
 CHUNK_SIZE = 1024*50
@@ -171,6 +172,8 @@ class HTTPRouter:
 class HTTPServer(HTTPRouter):
     def __init__(self, loop):
         HTTPRouter.__init__(self)
+        self.router = HTTPRouter()
+        self.sessionManager = HTTPSessionManager()
         self.loop = loop
         self.server = None
         self.base_fields = [("Server", "pynet/0.02")]

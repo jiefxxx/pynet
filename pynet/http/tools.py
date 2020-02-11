@@ -8,15 +8,16 @@ import magic
 
 
 def format_cookie_date(delta):
-    time_format = "%a, %d %b %Y"
-    return "%s" % ( (datetime.datetime.now() + datetime.timedelta(delta)).strftime(time_format) )
+    time_format = "%a, %d %b %Y %H:%M:%S %Z"
+    print(delta)
+    return "%s" % ((datetime.datetime.now() + datetime.timedelta(minutes=delta)).strftime(time_format))
 
 
-def create_cookie(name, value, expires=None, **kwargs):
+def create_cookie(name, value, expire=None, **kwargs):
     cookie = cookies.SimpleCookie()
     cookie[name] = value
-    if expires:
-        cookie[name]["expires"] = format_cookie_date(expires)
+    if expire:
+        cookie[name]["expires"] = format_cookie_date(expire)
     for kwarg in kwargs:
         cookie[name][kwarg] = kwargs[kwarg]
     return cookie.output()[12:]
