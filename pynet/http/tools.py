@@ -9,7 +9,6 @@ import magic
 
 def format_cookie_date(delta):
     time_format = "%a, %d %b %Y %H:%M:%S %Z"
-    print(delta)
     return "%s" % ((datetime.datetime.now() + datetime.timedelta(minutes=delta)).strftime(time_format))
 
 

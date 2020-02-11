@@ -10,6 +10,7 @@ from pynet.http.websocket import WebSocketRoom
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 class ScriptsRoom(WebSocketRoom):
     def __init__(self, name=None):
         WebSocketRoom.__init__(self, name)
