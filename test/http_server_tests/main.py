@@ -49,6 +49,11 @@ class TestHandler(HTTPHandler):
         self.response.text(200, "test_string", content_type="text/html")
 
 
+class TestJsonHandler(HTTPHandler):
+    async def GET(self, url):
+        self.response.json(200, {"test": {"name": "json", "value": 42}})
+
+
 scripts_room = ScriptsRoom()
 
 loop = asyncio.get_event_loop()
@@ -57,6 +62,7 @@ http_server.add_user_data("notify", scripts_room)
 http_server.add_route("/", MainHandler,  ws=scripts_room)
 http_server.add_route("/js/(.*)", FileHandler)
 http_server.add_route("/test", TestHandler)
+http_server.add_route("/json", TestJsonHandler)
 http_server.initialize(8080)
 
 try:

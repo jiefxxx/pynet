@@ -1,3 +1,4 @@
+import codecs
 import io
 import json
 import os
@@ -34,10 +35,12 @@ class HTTPResponse:
 
     def json(self, code, data, readable=False):
         self.text(code, "", content_type="application/json")
+
+        wrapper_file = codecs.getwriter('utf-8')(self.data)
         if readable:
-            json.dump(data, self.data, sort_keys=True, indent=4)
+            json.dump(data, wrapper_file, sort_keys=True, indent=4)
         else:
-            json.dump(data, self.data)
+            json.dump(data, wrapper_file)
         return self
 
     def file(self, path):
@@ -50,6 +53,10 @@ class HTTPResponse:
         return self
 
     def set_length(self, rng=None):
+        if not self.data:
+            self.header.fields.set("Content-Length", 0)
+            return
+
         self.data.seek(0, 2)
         full_size = self.data.tell()
         self.header.fields.set("Content-Length", full_size)
