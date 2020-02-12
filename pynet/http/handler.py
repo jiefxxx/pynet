@@ -1,11 +1,12 @@
 import inspect
+import os
 
 import pythread
 
 from pynet.http.data import HTTPData
 from pynet.http.exceptions import HTTPError
 from pynet.http.response import HTTPResponse
-from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
+from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, get_mimetype
 from pynet.http.websocket import webSocket_process_key, WebSocketClient
 
 
@@ -38,6 +39,18 @@ class HTTPHandler:
     def html_render(self, template_name, **kwargs):
         template = self.server.get_template(template_name)
         self.response.render(200, template, **kwargs)
+
+    def file(self, path, cached=True):
+        prevent_close = False
+        if not os.path.exists(path):
+            raise HTTPError(404)
+        if cached:
+            prevent_close = True
+            _, data, content_type, _ = self.server.cached.get(path)
+        else:
+            data = open(path, "rb")
+            content_type = get_mimetype(path)
+        self.response.file(200, data, content_type=content_type, prevent_close=prevent_close)
 
     def upgrade(self, stream_handler):
         self.stream_handler = stream_handler

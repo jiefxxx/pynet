@@ -11,7 +11,7 @@ from pynet.http.handler import HTTP404handler
 from pynet.http.header import HTTPRequestHeader
 from pynet.http.response import HTTPResponse
 from pynet.http.session import HTTPSessionManager
-from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, log_response
+from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, log_response, CachedFilesManager
 
 CHUNK_SIZE = 1024*50
 
@@ -172,8 +172,9 @@ class HTTPRouter:
 
 
 class HTTPServer(HTTPRouter):
-    def __init__(self, loop, template_dir="template/"):
+    def __init__(self, loop, template_dir="template/", cache_size=100):
         HTTPRouter.__init__(self)
+        self.cached = CachedFilesManager(max_size=cache_size)
         self.router = HTTPRouter()
         self.sessionManager = HTTPSessionManager()
         self.template_lookup = TemplateLookup(directories=[template_dir],

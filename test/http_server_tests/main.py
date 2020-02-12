@@ -30,18 +30,17 @@ class MainHandler(HTTPHandler):
     async def GET(self, url):
         # raise HTTPError(404)
         print("test_cookie", self.header.get_cookie("test_cookie", int))
-        self.response.header.set_cookie("test1", 42, expire=5, httponly=True)
+        self.response.header.set_cookie("test_cookie", 42, expire=5, httponly=True)
 
         print("test_session", self.session.data.get("test_session"))
         self.session.data["test_session"] = 43
 
-        self.response.file("/home/jief/workspace/pynet/test/http_server_tests/main.html")
+        self.file("/home/jief/workspace/pynet/test/http_server_tests/main.html", cached=True)
 
 
 class FileHandler(HTTPHandler):
     async def GET(self, url):
-        self.user_data["notify"].notify()
-        self.response.file("/home/jief/workspace/pynet/test/http_server_tests/js/"+url.regex[0])
+        self.file(self.user_data["base_path"]+url.regex[0], cached=True)
 
 
 class TestHandler(HTTPHandler):
@@ -65,7 +64,7 @@ loop = asyncio.get_event_loop()
 http_server = HTTPServer(loop, template_dir='/home/jief/workspace/pynet/test/http_server_tests/template')
 http_server.add_user_data("notify", scripts_room)
 http_server.add_route("/", MainHandler,  ws=scripts_room)
-http_server.add_route("/js/(.*)", FileHandler)
+http_server.add_route("/js/(.*)", FileHandler, user_data={"base_path": "/home/jief/workspace/pynet/test/http_server_tests/js/"})
 http_server.add_route("/test", TestHandler)
 http_server.add_route("/json", TestJsonHandler)
 http_server.add_route("/template", RenderHandler)
