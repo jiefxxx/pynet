@@ -4,6 +4,7 @@ import io
 import mimetypes
 import os
 import re
+import shutil
 from http import cookies
 
 import magic
@@ -66,11 +67,7 @@ def http_parse_field(line):
 def create_static_file(path):
     data = io.BytesIO()
     with open(path, "rb") as f:
-        while True:
-            content = f.read(50 * 1024)
-            if not content:
-                break
-            data.write(content)
+        shutil.copyfileobj(f, data)
     return path, data, get_mimetype(path), os.path.getmtime(path)
 
 

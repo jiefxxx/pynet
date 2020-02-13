@@ -1,6 +1,8 @@
 import codecs
+import gzip
 import io
 import json
+import shutil
 
 from mako.runtime import Context
 
@@ -57,6 +59,17 @@ class HTTPResponse:
         else:
             json.dump(data, wrapper_file)
         return self
+
+    def compress_gzip(self):
+        if not self.data:
+            return
+
+        self.header.fields.set("Content-Encoding", "gzip")
+        compressed = io.BytesIO()
+        compress_wrapper = gzip.GzipFile(fileobj=compressed, mode="wb")
+        self.data.seek(0)
+        shutil.copyfileobj(self.data, compress_wrapper)
+        self.data = compressed
 
     def set_length(self, rng=None):
         if not self.data:

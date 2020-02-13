@@ -26,6 +26,7 @@ class ScriptsRoom(WebSocketRoom):
 class MainHandler(HTTPHandler):
     handler_fields = [("Access-Control-Allow-Origin", "*")]
     enable_session = True
+    compression = "gzip"
 
     async def GET(self, url):
         # raise HTTPError(404)
@@ -35,7 +36,7 @@ class MainHandler(HTTPHandler):
         print("test_session", self.session.data.get("test_session"))
         self.session.data["test_session"] = 43
 
-        self.file("/home/jief/workspace/pynet/test/http_server_tests/main.html", cached=True)
+        self.file("/home/jief/workspace/pynet/test/http_server_tests/main.html")
 
 
 class FileHandler(HTTPHandler):

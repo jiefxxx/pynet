@@ -14,6 +14,7 @@ class HTTPHandler:
     handler_fields = []
     enable_session = False
     enable_range = False
+    compression = None
 
     def __init__(self, header, args, addr, server):
         self.addr = addr
@@ -72,6 +73,9 @@ class HTTPHandler:
         return HTTP_CONNECTION_CONTINUE
 
     async def prepare_response(self):
+        if self.compression == "gzip" and "gzip" in self.header.fields.get("Accept-Encoding").split(","):
+            self.response.compress_gzip()
+
         if self.enable_range:
             self.response.set_length(self.header.fields.get("Range"))
         else:

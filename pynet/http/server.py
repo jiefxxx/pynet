@@ -181,11 +181,11 @@ class HTTPServer(HTTPRouter):
                                        module_directory='/tmp/mako_modules')
         self.loop = loop
         self.server = None
-        self.base_fields = [("Server", "pynet/0.1.1")]
+        self.base_fields = [("Server", "pynet/0.1.2")]
         create_new_mode(ProcessMode, "httpServer", size=5)
 
     def set_base_fields(self, base_fields):
-        self.base_fields = base_fields + [("Server", "pynet/0.1.1")]
+        self.base_fields = base_fields + [("Server", "pynet/0.1.2")]
 
     def get_template(self, name):
         return self.template_lookup.get_template(name)
