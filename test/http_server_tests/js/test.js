@@ -184,7 +184,7 @@ app.controller('test', function($scope) {
      
     $scope.refresh_humidity = function(){
         $.ajax({
-            url: "http://192.168.1.19:4242/sensors/indoor_temp?limit=100000;named=1",
+            url: "http://192.168.1.19:4242/sensors/indoor_temp?limit=100;named=1",
             type: 'get',
             dataType: 'json',
             success: function (data) {

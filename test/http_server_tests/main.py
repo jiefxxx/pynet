@@ -1,8 +1,5 @@
-import asyncio
 import logging
 import time
-
-import pythread
 
 from pynet.http.handler import HTTPHandler
 from pynet.http.server import HTTPServer
@@ -61,21 +58,17 @@ class RenderHandler(HTTPHandler):
 
 scripts_room = ScriptsRoom()
 
-loop = asyncio.get_event_loop()
-http_server = HTTPServer(loop, template_dir='/home/jief/workspace/pynet/test/http_server_tests/template')
-http_server.add_user_data("notify", scripts_room)
-http_server.add_route("/", MainHandler,  ws=scripts_room)
-http_server.add_route("/js/(.*)", FileHandler, user_data={"base_path": "/home/jief/workspace/pynet/test/http_server_tests/js/"})
-http_server.add_route("/test", TestHandler)
-http_server.add_route("/json", TestJsonHandler)
-http_server.add_route("/template", RenderHandler)
-http_server.initialize(8080)
+http_server = HTTPServer(template_dir='/home/jief/workspace/pynet/test/http_server_tests/template')
 
-try:
-    loop.run_forever()
-except KeyboardInterrupt:
-    pass
+http_server.router.add_user_data("notify", scripts_room)
+http_server.router.add_route("/", MainHandler,  ws=scripts_room)
+http_server.router.add_route("/js/(.*)", FileHandler, user_data={"base_path": "/home/jief/workspace/pynet/test/http_server_tests/js/"})
+http_server.router.add_route("/test", TestHandler)
+http_server.router.add_route("/json", TestJsonHandler)
+http_server.router.add_route("/template", RenderHandler)
 
-http_server.close()
-loop.close()
-pythread.close_all_mode()
+http_server.start()
+
+http_server.run_forever()
+http_server.loop.close()
+
