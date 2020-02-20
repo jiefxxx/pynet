@@ -34,8 +34,8 @@ async def stream_sender(writer, stream_handler):
         await writer.drain()
 
 
-async def get_header(reader):
-    header = HTTPRequestHeader()
+async def get_header(reader, header_type):
+    header = header_type
     while True:
         try:
             data = await asyncio.wait_for(reader.readline(), timeout=5.0)
@@ -89,7 +89,7 @@ async def http_worker(reader, writer, server):
     stream_handler = None
     try:
         while True:
-            header = await get_header(reader)
+            header = await get_header(reader, HTTPRequestHeader)
             if not header.is_valid():
                 raise HTTPError(400)
 
@@ -134,7 +134,7 @@ async def http_worker(reader, writer, server):
         response = await send_error(writer, exc.code, server, handler)
         log_response(logging.warning, addr, response, handler)
 
-    except Exception as e:
+    except Exception:
         response = await send_error(writer, 500, server, handler)
         log_response(logging.exception, addr, response, handler)
 
@@ -171,7 +171,7 @@ class HTTPRouter:
         self.route.append((reg_path, handler, user_data))
 
 
-class HTTPServer():
+class HTTPServer:
     def __init__(self, port=8080, loop=None, template_dir="template/", cache_size=100):
         if not loop:
             loop = asyncio.get_event_loop()
