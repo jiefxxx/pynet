@@ -6,7 +6,7 @@ from pynet.http.tools import http_parse_query, http_parse_field, http_code_to_st
 
 class HTTPResponseHeader:
     def __init__(self):
-        self.proto = "HTTP/1.1"
+        self.protocol = "HTTP/1.1"
         self.code = 400
         self.fields = HTTPFields()
         self.fields.set("Content-Length", str(0))
@@ -21,8 +21,16 @@ class HTTPResponseHeader:
     def enable_range(self, value):
         self.fields.set("Accept-Ranges", value)
 
+    def parse_line(self, line):
+        if self.code is None:
+            self.protocol, self.code, _ = http_parse_query(line)
+        else:
+            self.fields.append(http_parse_field(line))
+            if self.fields.length() > 100:
+                raise HTTPError(431)
+
     def __str__(self):
-        ret = self.proto + " " + str(self.code) + " " + http_code_to_string(self.code) + "\r\n"
+        ret = self.protocol + " " + str(self.code) + " " + http_code_to_string(self.code) + "\r\n"
         ret += str(self.fields)
         ret += "\r\n"
         return ret
