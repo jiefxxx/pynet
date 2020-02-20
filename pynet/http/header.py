@@ -35,19 +35,31 @@ class HTTPRequestHeader:
         self.protocol = None
         self.fields = HTTPFields()
 
+    def new(self, url, query, protocol="HTTP/1.1"):
+        self.url = Url(url)
+        self.query = query
+        self.protocol = protocol
+        return self
+
     def is_valid(self):
         if self.url and self.query and self.protocol:
             return True
         return False
 
     def keep_alive(self):
-        connection = self.fields.get("Connection").split(', ')
+        connection = self.fields.get("Connection")
+        if not connection:
+            return False
+        connection = connection.split(', ')
         if "keep-alive" in connection:
             return True
         return False
 
     def upgraded(self):
-        connection = self.fields.get("Connection").split(', ')
+        connection = self.fields.get("Connection")
+        if not connection:
+            return False
+        connection = connection.split(', ')
         if "Upgrade" in connection:
             return True
         return False
