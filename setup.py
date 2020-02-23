@@ -1,11 +1,13 @@
 import setuptools
 
+from pynet.http import PYNET_VERSION
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="pynet",
-    version="0.1.2",
+    version=PYNET_VERSION,
     author="jiefxxx",
     author_email="jiefxxx@gmail.com",
     description="Network library",

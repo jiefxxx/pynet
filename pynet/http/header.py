@@ -7,9 +7,8 @@ from pynet.http.tools import http_parse_query, http_parse_field, http_code_to_st
 class HTTPResponseHeader:
     def __init__(self):
         self.protocol = "HTTP/1.1"
-        self.code = 400
+        self.code = None
         self.fields = HTTPFields()
-        self.fields.set("Content-Length", str(0))
 
     def set_cookie(self, name, value, expire=None, **kwargs):
         finder = str(name)+"="+str(value)

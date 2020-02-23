@@ -3,10 +3,11 @@ import os
 
 import pythread
 
+from pynet.http import HTTP_CONNECTION_UPGRADE, HTTP_CONNECTION_CONTINUE
 from pynet.http.data import HTTPData
 from pynet.http.exceptions import HTTPError
 from pynet.http.response import HTTPResponse
-from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, get_mimetype
+from pynet.http.tools import get_mimetype
 from pynet.http.websocket import webSocket_process_key, WebSocketClient
 
 
@@ -83,7 +84,7 @@ class HTTPHandler:
 
         return self.response
 
-    def feed(self, data_chunk):
+    def write(self, data_chunk):
         self.data.feed(data_chunk)
 
     def get_query_fct(self):

@@ -6,61 +6,13 @@ import pythread
 from mako.lookup import TemplateLookup
 from pythread.modes import ProcessMode
 
+from pynet.http import CHUNK_SIZE, PYNET_VERSION, HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE
 from pynet.http.exceptions import HTTPError, HTTPStreamEnd
 from pynet.http.handler import HTTP404handler
 from pynet.http.header import HTTPRequestHeader
 from pynet.http.response import HTTPResponse
 from pynet.http.session import HTTPSessionManager
-from pynet.http.tools import HTTP_CONNECTION_CONTINUE, HTTP_CONNECTION_UPGRADE, log_response, CachedFilesManager
-
-CHUNK_SIZE = 1024*50
-
-
-async def stream_reader(reader, stream_handler):
-    prev_data = b''
-    while True:
-        data = await reader.read(CHUNK_SIZE)
-        if len(data) == 0:
-            raise HTTPStreamEnd()
-        prev_data = stream_handler.feed(prev_data + data)
-
-
-async def stream_sender(writer, stream_handler):
-    while True:
-        data = await stream_handler.queue.async_q.get()
-        if data is None:
-            raise HTTPStreamEnd()
-        writer.write(data)
-        await writer.drain()
-
-
-async def get_header(reader, header_type):
-    header = header_type
-    while True:
-        try:
-            data = await asyncio.wait_for(reader.readline(), timeout=5.0)
-        except asyncio.TimeoutError:
-            raise HTTPError(408)
-        data = data[:-2]
-        if len(data) > 0:
-            header.parse_line(data)
-        else:
-            break
-    return header
-
-
-async def get_data(reader, size, handler):
-    while size > 0:
-        if CHUNK_SIZE > size:
-            data = await reader.read(size)
-        else:
-            data = await reader.read(CHUNK_SIZE)
-        size -= len(data)
-        if asyncio.iscoroutinefunction(handler.feed):
-            await handler.feed(data)
-        else:
-            handler.feed(data)
-    return True
+from pynet.http.tools import log_response, CachedFilesManager, stream_reader, stream_sender, get_header, get_data
 
 
 async def send_response(writer, response):
@@ -103,7 +55,7 @@ async def http_worker(reader, writer, server):
 
                 data_count = header.fields.get("Content-Length", 0, int)
 
-                if not await get_data(reader, data_count, handler):
+                if not await get_data(reader, handler, data_count):
                     raise HTTPError(handler.abort_code, handler=handler)
 
                 await handler.execute_request()
@@ -184,11 +136,11 @@ class HTTPServer:
         self.loop = loop
         self.server = None
         self.port = port
-        self.base_fields = [("Server", "pynet/0.1.2")]
+        self.base_fields = [("Server", PYNET_VERSION)]
         pythread.create_new_mode(ProcessMode, "httpServer", size=5)
 
     def set_base_fields(self, base_fields):
-        self.base_fields = base_fields + [("Server", "pynet/0.1.2")]
+        self.base_fields = base_fields + [("Server", PYNET_VERSION)]
 
     def get_template(self, name):
         return self.template_lookup.get_template(name)
