@@ -79,17 +79,13 @@ class HTTPResponse:
 
         full_size = get_file_length(self.data)
         self.header.fields.set("Content-Length", full_size)
-        print(rng)
         if rng:
             seek = int(rng.split("=")[1][:-1])
-            seek_end = full_size - 1  # TODO:seek end not fully implemented
-            size = seek_end - seek + 1
+            size = full_size - seek
             self.header.fields.set("Content-Range", "bytes "+str(seek)+"-"+str(full_size-1)+"/"+str(full_size))
             self.header.fields.set("Content-Length", size)
             self.header.code = 206
             self.data_seek = seek
-            print(seek)
-            print(self)
 
     def sender(self, chunk_size):
         yield str(self.header).encode()
