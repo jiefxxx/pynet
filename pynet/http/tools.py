@@ -153,11 +153,14 @@ async def stream_sender(writer, stream_handler):
         await writer.drain()
 
 
-async def get_header(reader, header_type):
+async def get_header(reader, header_type, timeout=None):
     header = header_type()
     while True:
         try:
-            data = await asyncio.wait_for(reader.readline(), timeout=5.0)
+            if timeout:
+                data = await asyncio.wait_for(reader.readline(), timeout=timeout)
+            else:
+                data = await reader.readline()
         except asyncio.TimeoutError:
             raise HTTPError(408)
         data = data[:-2]
