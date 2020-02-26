@@ -40,6 +40,7 @@ class HTTPResponse:
     def file(self, code, data, content_type="text/text", prevent_close=False):
         self.header.code = code
         self.header.fields.set("Content-type", content_type)
+        self.header.enable_range("bytes")
         self.data = data
         self.prevent_close = prevent_close
         return self
