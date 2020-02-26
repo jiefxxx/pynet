@@ -87,6 +87,8 @@ class HTTPResponse:
             self.header.fields.set("Content-Length", size)
             self.header.code = 206
             self.data_seek = seek
+            print(seek)
+            print(self)
 
     def sender(self, chunk_size):
         yield str(self.header).encode()
