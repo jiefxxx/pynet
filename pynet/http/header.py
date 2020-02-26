@@ -146,11 +146,11 @@ class Url:
         self.query = parse_qsl(self._parsed.query)
         self.regex = []
 
-    def get(self, key, default=None, value_type=None):
+    def get(self, key, default=None, data_type=None):
         for query in self.query:
             if query[0] == key:
-                if value_type:
-                    return value_type(query[1])
+                if data_type:
+                    return data_type(query[1])
                 return query[1]
         return default
 
