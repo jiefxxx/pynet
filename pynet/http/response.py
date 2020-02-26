@@ -79,6 +79,7 @@ class HTTPResponse:
 
         full_size = get_file_length(self.data)
         self.header.fields.set("Content-Length", full_size)
+        print(rng)
         if rng:
             seek = int(rng.split("=")[1][:-1])
             seek_end = full_size - 1  # TODO:seek end not fully implemented
