@@ -55,8 +55,7 @@ async def http_worker(reader, writer, server):
 
                 data_count = header.fields.get("Content-Length", 0, int)
 
-                if not await get_data(reader, handler, data_count):
-                    raise HTTPError(handler.abort_code, handler=handler)
+                await get_data(reader, handler, data_count)
 
                 await handler.execute_request()
                 response = await handler.prepare_response()
