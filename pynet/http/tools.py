@@ -172,7 +172,9 @@ async def get_header(reader, header_type, timeout=None):
 
 
 async def get_data(reader, handler, size=None):
-    while not size and size > 0:
+    while True:
+        if size == 0:
+            break
         if size and CHUNK_SIZE > size:
             data = await reader.read(size)
         else:
