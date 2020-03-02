@@ -1,10 +1,11 @@
 import inspect
+import json
 import os
 
 import pythread
 
 from pynet.http import HTTP_CONNECTION_UPGRADE, HTTP_CONNECTION_CONTINUE
-from pynet.http.data import HTTPData
+from pynet.http.data import HTTPData, HTTPMultipartSender
 from pynet.http.exceptions import HTTPError
 from pynet.http.response import HTTPResponse
 from pynet.http.tools import get_mimetype
@@ -42,7 +43,7 @@ class HTTPHandler:
         template = self.server.get_template(template_name)
         self.response.render(200, template, **kwargs)
 
-    def file(self, path, cached=True):
+    def file(self, path, cached=True, attachment=False):
         prevent_close = False
         if not os.path.exists(path):
             raise HTTPError(404)
@@ -53,6 +54,23 @@ class HTTPHandler:
             data = open(path, "rb")
             content_type = get_mimetype(path)
         self.response.file(200, data, content_type=content_type, prevent_close=prevent_close)
+        if attachment:
+            self.response.header.fields.set("Content-Disposition", 'attachment; filename="'+os.path.basename(path)+'"')
+
+    def multipart(self, objects=None, files=None):
+        if not objects:
+            objects = []
+        if not files:
+            files = []
+
+        multipart = HTTPMultipartSender()
+        for entry in objects:
+            multipart.add(entry[0], json.dumps(entry[1]))
+
+        for entry in files:
+            multipart.add(entry[0], entry[1], file=True)
+
+        self.response.custom_data(200, multipart)
 
     def upgrade(self, stream_handler):
         self.stream_handler = stream_handler
@@ -78,6 +96,7 @@ class HTTPHandler:
             self.response.compress_gzip()
 
         if self.enable_range:
+            self.response.header.enable_range("bytes")
             self.response.set_length(self.header.fields.get("Range"))
         else:
             self.response.set_length()

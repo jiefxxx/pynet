@@ -85,7 +85,7 @@ class HTTPMultipartSender:
         tot_size += len("--"+self.boundary+"--")
         return tot_size
 
-    def read_chunk(self, chunk_size):
+    def read(self, chunk_size):
         for field, bin_file in self.list:
             yield ("--" + self.boundary + "\r\n").encode()
             yield str(field).encode()+"\r\n".encode()
@@ -98,3 +98,7 @@ class HTTPMultipartSender:
                 yield data
 
         yield ("--" + self.boundary + "--").encode()
+
+    def close(self):
+        for _, bin_file in self.list:
+            bin_file.close()

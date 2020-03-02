@@ -40,7 +40,6 @@ class HTTPResponse:
     def file(self, code, data, content_type="text/text", prevent_close=False):
         self.header.code = code
         self.header.fields.set("Content-type", content_type)
-        self.header.enable_range("bytes")
         self.data = data
         self.prevent_close = prevent_close
         return self
@@ -61,8 +60,14 @@ class HTTPResponse:
             json.dump(data, wrapper_file)
         return self
 
+    def custom_data(self, code, custom):
+        self.data = custom
+        self.header.code = code
+        self.header.fields.set("Content-type", self.data.get_content_type())
+        return self
+
     def compress_gzip(self):
-        if not self.data:
+        if not isinstance(self.data, io.BytesIO):
             return
 
         self.header.fields.set("Content-Encoding", "gzip")
@@ -75,6 +80,9 @@ class HTTPResponse:
     def set_length(self, rng=None):
         if not self.data:
             self.header.fields.set("Content-Length", 0)
+            return
+        if not isinstance(self.data, io.IOBase):
+            self.header.fields.set("Content-Length", self.data.get_size())
             return
 
         full_size = get_file_length(self.data)
@@ -90,7 +98,8 @@ class HTTPResponse:
     def sender(self, chunk_size):
         yield str(self.header).encode()
         if self.data:
-            self.data.seek(self.data_seek)
+            if isinstance(self.data, io.IOBase):
+                self.data.seek(self.data_seek)
             while True:
                 data = self.data.read(chunk_size)
                 if not data:
