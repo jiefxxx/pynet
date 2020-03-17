@@ -52,7 +52,7 @@ class HTTPData:
         self.data_stream.seek(n)
 
     def json(self):
-        wrapper_file = codecs.getwriter('utf-8')(self.data_stream)
+        wrapper_file = codecs.getreader('utf-8')(self.data_stream)
         return json.load(wrapper_file)
 
 
