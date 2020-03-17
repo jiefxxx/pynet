@@ -51,7 +51,7 @@ class HTTPData:
         self.data_stream.seek(n)
 
     def json(self):
-        return json.loads(self.read())
+        return json.load(self.data_stream)
 
 
 class HTTPMultipartSender:
