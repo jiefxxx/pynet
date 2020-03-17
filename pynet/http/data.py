@@ -1,3 +1,4 @@
+import codecs
 import io
 import json
 import os
@@ -51,7 +52,8 @@ class HTTPData:
         self.data_stream.seek(n)
 
     def json(self):
-        return json.load(self.data_stream)
+        wrapper_file = codecs.getwriter('utf-8')(self.data_stream)
+        return json.load(wrapper_file)
 
 
 class HTTPMultipartSender:
