@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import re
+import sys
+import traceback
 
 import pythread
 from mako.lookup import TemplateLookup
@@ -21,14 +23,17 @@ async def send_response(writer, response):
         await writer.drain()
 
 
-async def send_error(writer, code, server, handler=None):
+async def send_error(writer, code, server, handler=None, data=None):
     if handler:
-        response = handler.response.error(code)
+        response = handler.response
     else:
         response = HTTPResponse()
         response.header.fields.add_fields(server.base_fields)
     try:
-        await send_response(writer, response.error(code))
+        print(data.encode())
+        response.error(code, data=data)
+        response = await handler.prepare_response()
+        await send_response(writer, response)
     except (ConnectionResetError, BrokenPipeError):
         pass
     finally:
@@ -86,7 +91,9 @@ async def http_worker(reader, writer, server):
         log_response(logging.warning, addr, response, handler)
 
     except Exception:
-        response = await send_error(writer, 500, server, handler)
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        # traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
+        response = await send_error(writer, 500, server, handler, data="".join(traceback.format_tb(exc_traceback)))
         log_response(logging.exception, addr, response, handler)
 
     finally:

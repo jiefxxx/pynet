@@ -27,17 +27,22 @@ class HTTPResponse:
         self.header.code = 101
         return self
 
-    def error(self, code):
+    def error(self, code, data=None, content_type="text/plain"):
         self.header.code = code
+        if data:
+            self.header.fields.set("Content-type", content_type)
+            self.data = io.BytesIO(data.encode())
+        else:
+            self.data = None
         return self
 
-    def text(self, code, data, content_type="text/text"):
+    def text(self, code, data, content_type="text/plain"):
         self.header.code = code
         self.header.fields.set("Content-type", content_type)
         self.data = io.BytesIO(data.encode())
         return self
 
-    def file(self, code, data, content_type="text/text", prevent_close=False):
+    def file(self, code, data, content_type="text/plain", prevent_close=False):
         self.header.code = code
         self.header.fields.set("Content-type", content_type)
         self.data = data
