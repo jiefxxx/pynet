@@ -26,7 +26,7 @@ class MainHandler(HTTPHandler):
     compression = "gzip"
 
     async def GET(self, url):
-        # raise Exception()
+        test = test1
         # raise HTTPError(404)
         print("test_cookie", self.header.get_cookie("test_cookie", int))
         self.response.header.set_cookie("test_cookie", 42, expire=5, httponly=True)

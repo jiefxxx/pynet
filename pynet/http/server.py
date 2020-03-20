@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import re
-import sys
 import traceback
 
 import pythread
@@ -30,7 +29,6 @@ async def send_error(writer, code, server, handler=None, data=None):
         response = HTTPResponse()
         response.header.fields.add_fields(server.base_fields)
     try:
-        print(data.encode())
         response.error(code, data=data)
         response = await handler.prepare_response()
         await send_response(writer, response)
@@ -91,9 +89,7 @@ async def http_worker(reader, writer, server):
         log_response(logging.warning, addr, response, handler)
 
     except Exception:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        # traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
-        response = await send_error(writer, 500, server, handler, data="".join(traceback.format_tb(exc_traceback)))
+        response = await send_error(writer, 500, server, handler, data=traceback.format_exc())
         log_response(logging.exception, addr, response, handler)
 
     finally:
