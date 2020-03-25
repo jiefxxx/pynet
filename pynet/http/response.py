@@ -60,9 +60,9 @@ class HTTPResponse:
         self.text(code, "", content_type="application/json")
         wrapper_file = codecs.getwriter('utf-8')(self.data)
         if readable:
-            json.dump(data, wrapper_file, sort_keys=True, indent=4, ignore_nan=True)
+            json.dump(data, wrapper_file, sort_keys=True, indent=4, allow_nan=False)
         else:
-            json.dump(data, wrapper_file, ignore_nan=True)
+            json.dump(data, wrapper_file, allow_nan=False)
         return self
 
     def custom_data(self, code, custom):
